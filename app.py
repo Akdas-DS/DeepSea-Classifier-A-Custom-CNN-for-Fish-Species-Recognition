@@ -3,17 +3,27 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 from PIL import Image
-import os
 
 # -----------------
-# Load class names automatically
+# Class names from dataset
 # -----------------
-train_dir = r"C:\Users\makda\OneDrive\Desktop\Project_3\Dataset\images.cv_jzk6llhf18tm3k0kyttxz\data\train"
-class_names = sorted(os.listdir(train_dir))  # Reads folder names as classes
-num_classes = len(class_names)
+CLASS_NAMES = [
+    "animal fish",
+    "animal fish bass",
+    "fish sea_food black_sea_sprat",
+    "fish sea_food gilt_head_bream",
+    "fish sea_food hourse_mackerel",
+    "fish sea_food red_mullet",
+    "fish sea_food red_sea_bream",
+    "fish sea_food sea_bass",
+    "fish sea_food shrimp",
+    "fish sea_food striped_red_mullet",
+    "fish sea_food trout"
+]
+NUM_CLASSES = len(CLASS_NAMES)
 
 # -----------------
-# Define model (must match your training architecture)
+# Define model architecture
 # -----------------
 class FishCNN(nn.Module):
     def __init__(self, num_classes):
@@ -50,16 +60,23 @@ class FishCNN(nn.Module):
         return x
 
 # -----------------
-# Load model
+# Load trained model
 # -----------------
+MODEL_PATH = "fish_cnn_model.pth"  # Put your model in same folder as app.py
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = FishCNN(num_classes)
-model.load_state_dict(torch.load(r"C:\Users\makda\OneDrive\Desktop\Project_3\fish_cnn_model.pth", map_location=device))
+model = FishCNN(NUM_CLASSES)
+
+# Load with flexibility for mismatched classes
+state_dict = torch.load(MODEL_PATH, map_location=device)
+model_state_dict = model.state_dict()
+filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_state_dict and model_state_dict[k].shape == v.shape}
+model_state_dict.update(filtered_state_dict)
+model.load_state_dict(model_state_dict)
 model.to(device)
 model.eval()
 
 # -----------------
-# Define transforms
+# Image transforms
 # -----------------
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -85,5 +102,5 @@ if uploaded_file is not None:
         _, predicted = torch.max(outputs, 1)
         confidence = torch.softmax(outputs, dim=1)[0][predicted].item() * 100
 
-    st.success(f"**Predicted Fish Species:** {class_names[predicted.item()]}")
+    st.success(f"**Predicted Fish Species:** {CLASS_NAMES[predicted.item()]} 🐟")
     st.info(f"**Confidence:** {confidence:.2f}%")
